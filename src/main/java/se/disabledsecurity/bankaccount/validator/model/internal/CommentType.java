@@ -1,5 +1,5 @@
 package se.disabledsecurity.bankaccount.validator.model.internal;
 
-public enum BankAccountType {
-    TYPE_ONE, TYPE_TWO
+public enum CommentType {
+    TYPE_ONE, TYPE_TWO, TYPE_THREE
 }
