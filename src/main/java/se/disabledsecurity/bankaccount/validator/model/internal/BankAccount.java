@@ -46,8 +46,8 @@ public class BankAccount {
     private Either<ModulusException, BankAccount> validateType1() {
         String fullNumber = sortingCode + accountNumber;
         String numberToCheck = bank.getComment() == CommentType.TYPE_ONE
-                               ? fullNumber.substring(1, 10)
-                               : fullNumber.substring(0, 10);
+                               ? fullNumber.substring(1, 11)  // Last 3 digits of sorting code + 7 digits of account number
+                               : fullNumber.substring(0, 11); // Whole sorting code + 7 digits of account number
 
         return ModulusCheck.mod11.apply(numberToCheck)
                                  .flatMap(isValid -> isValid ? Either.right(this) : Either.left(new ModulusException("Invalid Type 1 account: check digit mismatch")));
@@ -68,6 +68,17 @@ public class BankAccount {
                                         Either.left(new ModulusException(
                                                 "Invalid Type 2 account (Comment 2): modulus 11 check failed")));
         };
+    }
+
+    public String getFormattedAccountNumber() {
+        if (bank == Bank.SWEDBANK_TYPE1) {
+            return String.format("%s-%s-%s", sortingCode, accountNumber.substring(0, 2), accountNumber.substring(2));
+        } else if (bank.getType() == BankAccountType.TYPE_ONE) {
+            return String.format("%s %s %s %s", sortingCode, accountNumber.substring(0, 2), accountNumber.substring(2, 5), accountNumber.substring(5));
+        } else {
+            // For Type 2 accounts, you might want to implement specific formatting rules based on the bank
+            return sortingCode + " " + accountNumber;
+        }
     }
 
     public String getSortingCode() {

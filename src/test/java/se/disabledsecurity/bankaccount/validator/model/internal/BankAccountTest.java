@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.control.Either;
 import se.disabledsecurity.bankaccount.validator.exception.ModulusException;
-import se.disabledsecurity.bankaccount.validator.model.internal.BankAccount;
 
 class BankAccountTest {
 
