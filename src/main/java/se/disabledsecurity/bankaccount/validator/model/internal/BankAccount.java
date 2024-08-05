@@ -2,10 +2,8 @@ package se.disabledsecurity.bankaccount.validator.model.internal;
 
 import io.vavr.control.Either;
 import io.vavr.control.Try;
-import lombok.Getter;
 import se.disabledsecurity.bankaccount.validator.exception.ModulusException;
 
-@Getter
 public class BankAccount {
     private final String sortingCode;
     private final String accountNumber;
@@ -26,13 +24,13 @@ public class BankAccount {
                     }
 
                     String sortingCode = cleanedAccountString.substring(0, 4);
-                    String accountNumber = cleanedAccountString.substring(4);
-
                     Bank bank = Bank.getBankBySortingCode(Integer.parseInt(sortingCode));
-                    int expectedLength = bank.getType() == BankAccountType.TYPE_ONE ?
-                                         bank.getAccountMaxLength() :
-                                         4 + bank.getAccountMaxLength();
 
+                    int sortingCodeLength = bank.getType() == BankAccountType.TYPE_ONE ? 4 : 5;
+                    sortingCode = cleanedAccountString.substring(0, sortingCodeLength);
+                    String accountNumber = cleanedAccountString.substring(sortingCodeLength);
+
+                    int expectedLength = sortingCodeLength + bank.getAccountMaxLength();
                     if (cleanedAccountString.length() != expectedLength) {
                         throw new IllegalArgumentException("Invalid account string: incorrect length");
                     }
@@ -41,5 +39,46 @@ public class BankAccount {
                 }).toEither().mapLeft(e -> new ModulusException("Failed to parse account string", e));
     }
 
-}
+    public Either<ModulusException, BankAccount> validate() {
+        return bank.getType() == BankAccountType.TYPE_ONE ? validateType1() : validateType2();
+    }
 
+    private Either<ModulusException, BankAccount> validateType1() {
+        String fullNumber = sortingCode + accountNumber;
+        String numberToCheck = bank.getComment() == CommentType.TYPE_ONE
+                               ? fullNumber.substring(1, 10)
+                               : fullNumber.substring(0, 10);
+
+        return ModulusCheck.mod11.apply(numberToCheck)
+                                 .flatMap(isValid -> isValid ? Either.right(this) : Either.left(new ModulusException("Invalid Type 1 account: check digit mismatch")));
+    }
+
+    private Either<ModulusException, BankAccount> validateType2() {
+        return switch (bank.getComment()) {
+            case TYPE_ONE, TYPE_THREE -> ModulusCheck.mod10
+                    .apply(accountNumber)
+                    .flatMap(isValid -> isValid ?
+                                        Either.right(this) :
+                                        Either.left(new ModulusException(
+                                                "Invalid Type 2 account (Comment 1 or 3): modulus 10 check failed")));
+            case TYPE_TWO -> ModulusCheck.mod11
+                    .apply(accountNumber)
+                    .flatMap(isValid -> isValid ?
+                                        Either.right(this) :
+                                        Either.left(new ModulusException(
+                                                "Invalid Type 2 account (Comment 2): modulus 11 check failed")));
+        };
+    }
+
+    public String getSortingCode() {
+        return sortingCode;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public Bank getBank() {
+        return bank;
+    }
+}
